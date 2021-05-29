@@ -4,6 +4,8 @@ AWS Lambda Function example to detect cold or hot state.
 
 In this example - we need to skip re-initializing the firebase connection and db object create - if the function is 'HOT'
 
+Attempting to re-initialize throws an error we want to avoid.
+
 Global code - defined before the async handler function is only executed once, when the lambda cold starts,  The handler code executes when the function is 'hot'
 
 So loading the libraries for example.
