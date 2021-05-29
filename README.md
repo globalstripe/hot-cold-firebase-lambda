@@ -16,4 +16,6 @@ Ideally you would do that once ... in the global area ... but you cant await a r
 
 Top level async in Lambda would fix this!
 
+https://levelup.gitconnected.com/avoiding-the-pitfalls-of-async-node-js-functions-in-aws-lambda-941220582e7a
+
 This has been a fascinating topic to research, and a nerve-wrecking one to debug :) 
