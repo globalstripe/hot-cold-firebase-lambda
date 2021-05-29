@@ -1,0 +1,155 @@
+const AWS = require('aws-sdk');
+const admin = require('firebase-admin');
+
+const client = new AWS.SecretsManager({
+  region: process.env.AWS_REGION
+});
+
+let initResult = '';
+let db = '';
+
+exports.handler = async(event) => {
+
+  // let d = new Date();
+  // console.log("Execution Started: ", d);
+
+  try {
+    // Pass the async function the name of the secret you want to retrieve
+    const thesecret = await _getPrivateKeyValue('Firebase_Service_Key_Test');
+
+    // console.log("Result: ", initResult.length)
+
+    try {
+
+      const serviceAccount = JSON.parse(thesecret.FirebaseServiceAccount);
+      console.log('Retrieved Service Account Details - OK');
+
+      try {
+
+        if (initResult.length === 0) {
+          console.log('Lambda is COLD - Initialising ....');
+          initResult = admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount)
+          });
+          console.log('Firebase Admin Initialised OK');
+
+          db = admin.firestore();
+
+          // Fix that timestamp warning message with this
+          const settings = { /* your settings... */ timestampsInSnapshots: true };
+          db.settings(settings);
+          console.log('DB Initialised OK');
+
+        }
+
+        else {
+          console.log("Lambda is HOT: DB Already Initialised");
+        }
+
+      }
+
+      catch { // initializeApp
+        console.log("FAILED admin.initializeApp");
+      }
+
+
+    }
+    catch { // Set ServiceAccount
+      console.log('Failed to get ServiceAccount');
+    }
+
+    const snapshot = await db.collection("messages").where("apikey", "==", "0592050").get();
+
+    console.log("Snapshot Size: ", snapshot.size); // how many docs have been returned
+
+    let count = 1;
+    // console.log("count: ", count);
+
+    for (const document of snapshot.docs) {
+      //console.log("contents: ", document.data().URL);
+      console.log("contents: [" + count + "] ", document.data().URL);
+      count = count + 1;
+    }
+
+    console.log("count: ", count - 1);
+
+    /// Write some data
+
+    const d = new Date()
+    const data = {
+      URL: 'https://content.bingwatchplaylearn.com/f73f3ef7-3b48-4135-84f2-bdb59301ab9d/mp4/TestUpload_Mp4_Avc_Aac_16x9_1280x720p_24Hz_4.5Mbps_qvbr.mp4',
+      apikey: '0592050',
+      country: 'USA',
+      timestamp: d
+    };
+
+    try {
+      await db.collection("messages").add(data);
+      console.log("Successful Firebase Write");
+    }
+    catch {
+      console.log("Failed to update Firebase");
+    }
+
+    try {
+      await db.collection("messages").doc('tJSilNuv1KnkK9WLwdHK').set(data);
+      console.log("Successful Firebase Update");
+    }
+    catch {
+      console.log("Failed to update Firebase");
+    }
+
+
+    console.log("Done");
+    console.log("Cleaning UP and Closing DB Connection");
+
+    try {
+      await db.terminate;
+      console.log("Firestore DB Closed");
+    }
+    catch {
+      console.log("Failed to Close Firestore DB")
+    }
+
+    // let e = new Date();
+    // console.log("Execution Ended: ", e)
+
+  } // _getPrivateKeyValue
+  catch {
+    console.log("Failed to Retrieve Service Account Secrets - KO")
+  }
+
+  const response = {
+    statusCode: 200,
+    //body: JSON.stringify('Lambda Retrieved your Secret: ' + thesecret.FirebaseServiceAccount),
+    body: 'Firebase OK'
+  };
+
+  return response;
+
+
+};
+
+
+
+
+const _getPrivateKeyValue = async function(secret_key) {
+
+  return new Promise((resolve, reject) => {
+    client.getSecretValue({ SecretId: secret_key }, function(err, data) {
+      if (err) {
+        reject(err);
+      }
+      else {
+        if ('SecretString' in data) {
+          resolve(JSON.parse(data.SecretString));
+        }
+        else {
+          let buff = new Buffer(data.SecretBinary, 'base64');
+          resolve(JSON.parse(buff.toString('ascii')));
+        }
+      }
+    });
+  });
+
+};
