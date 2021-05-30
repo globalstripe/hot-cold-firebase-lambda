@@ -1,5 +1,8 @@
 const AWS = require('aws-sdk');
+// Lamda Layer
 const admin = require('firebase-admin');
+
+console.log("Cold Start - running code proceeding the handler")
 
 const client = new AWS.SecretsManager({
   region: process.env.AWS_REGION
@@ -8,7 +11,12 @@ const client = new AWS.SecretsManager({
 let initResult = '';
 let db = '';
 
-exports.handler = async(event) => {
+console.log("Cold Start - Done")
+
+exports.handler = async(event, context) => {
+
+  console.log("Running the handler function")
+  console.log("Context Object:", context);
 
   // let d = new Date();
   // console.log("Execution Started: ", d);
@@ -25,6 +33,8 @@ exports.handler = async(event) => {
       console.log('Retrieved Service Account Details - OK');
 
       try {
+
+        // Is this the best test we can do ?  What about checking context maybe?
 
         if (initResult.length === 0) {
           console.log('Lambda is COLD - Initialising ....');
@@ -71,7 +81,7 @@ exports.handler = async(event) => {
       count = count + 1;
     }
 
-    console.log("count: ", count - 1);
+    console.log("Processed: ", count - 1);
 
     /// Write some data
 
